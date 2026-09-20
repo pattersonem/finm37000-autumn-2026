@@ -7,6 +7,12 @@ from .agg import (
 from .arb_free_svi import (
     fit_arb_free_svi as fit_arb_free_svi,
 )
+from .cache import (
+    disk_cache as disk_cache,
+    generate_cache_filename as generate_cache_filename,
+    get_cache_dir as get_cache_dir,
+    get_cached_dataframe as get_cached_dataframe,
+)
 from .continuous import (
     additive_splice as additive_splice,
     multiplicative_splice as multiplicative_splice,
@@ -17,11 +23,11 @@ from .db_env_util import (
 )
 from .futures import (
     RateCurve as RateCurve,
-    favorite_def_cols as favorite_def_cols,
     build_short_rate_curve as build_short_rate_curve,
-    get_all_legs_on as get_all_legs_on,
+    filter_legs as filter_legs,
     get_official_stats as get_official_stats,
     get_short_rate_curve as get_short_rate_curve,
+    get_stats_by_date as get_stats_by_date,
 )
 from .lr_tree import (
     calc_american_price as calc_american_price,

@@ -59,7 +59,7 @@ def fetch_trades(
     end: pd.Timestamp,
     dataset: str = "GLBX.MDP3",
 ) -> pd.DataFrame:
-    """Fetch raw trade prints for a single symbol.
+    """Fetch raw trades for a single symbol.
 
     Args:
         client: Databento client to make data requests.

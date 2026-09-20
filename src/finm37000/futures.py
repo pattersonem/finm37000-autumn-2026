@@ -9,20 +9,6 @@ import pandas as pd
 
 from finm37000.time import us_business_day
 
-favorite_def_cols = [
-    "instrument_id",
-    "raw_symbol",
-    "expiration",
-    "unit_of_measure",
-    "unit_of_measure_qty",
-    "min_price_increment",
-    "currency",
-    "group",
-    "exchange",
-    "security_type",
-    "trading_reference_price",
-]
-
 
 def get_official_stats(raw_stats: pd.DataFrame, def_df: pd.DataFrame) -> pd.DataFrame:
     """Filter official daily statistics with instrument expiration.
@@ -80,29 +66,23 @@ def filter_legs(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def get_all_legs_on(
+def get_stats_by_date(
     client: db.Historical,
     date: datetime.date,
-    parent: str,
-) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Retrieve all futures legs on a given date.
+    defs: pd.DataFrame,
+) -> pd.DataFrame:
+    """Attempt to find all futures leg stats for a date.
+
+    Look 2 business days ahead to include a wide enough
+    window to cover most delays.
 
     :param client: Databento client to make data requests.
     :param date: Date on which to get the futures legs.
-    :param parent: Futures parent product symbol
-    :return: A pair of `pd.DataFrame`, the statistics and the definitions.
+    :param defs: `pd.DataFrame` of definitions to be filtered for futures legs.
+    :return: The `pd.DataFrame` of stats.
     """
-    all_defs = client.timeseries.get_range(
-        dataset="GLBX.MDP3",
-        schema="definition",
-        symbols=parent,
-        stype_in="parent",
-        start=date,
-    )
-    leg_defs = filter_legs(all_defs.to_df())
+    leg_defs = filter_legs(defs)
     legs = leg_defs["raw_symbol"].unique()
-    # Some stats do not arrive on the same day, then due to
-    # date rounding, one day is not enough.
     next_bday = (date + 2 * us_business_day).to_pydatetime().date()
     raw_stats = client.timeseries.get_range(
         dataset="GLBX.MDP3",
@@ -114,7 +94,7 @@ def get_all_legs_on(
     raw_df = raw_stats.to_df()
     raw_same_day = raw_df[raw_df["ts_ref"].dt.date == date]
     stats = get_official_stats(raw_same_day, leg_defs.reset_index())
-    return stats, leg_defs
+    return stats
 
 
 def build_short_rate_curve(
@@ -142,7 +122,7 @@ def build_short_rate_curve(
     stats : pd.DataFrame
         One row per leg for the target date, with `expiration` and
         `Settlement price` columns. See `get_official_stats` and
-        `get_all_legs_on`.
+        `get_stats_by_date`.
     start : pd.Timestamp
         The date to build the curve as of; also the years-to-expiration anchor.
     days_per_year : float
@@ -220,7 +200,14 @@ def get_short_rate_curve(
         Maps a time to expiration in years to an interpolated zero rate.
 
     """
-    stats, _ = get_all_legs_on(client, start.date(), parent=parent)
+    defs = client.timeseries.get_range(
+        dataset="GLBX.MDP3",
+        schema="definition",
+        symbols=parent,
+        stype_in="parent",
+        start=start.date(),
+    ).to_df()
+    stats = get_stats_by_date(client, start.date(), defs=defs)
     return build_short_rate_curve(
         stats.reset_index(), start, days_per_year=days_per_year
     )

@@ -486,9 +486,9 @@ def imply_european_vol(
             )
         )
         return np.nan
-    result = root_scalar(f, bracket=[lb, ub], method="brentq")  # type: ignore[call-overload]
+    result = root_scalar(f, bracket=[lb, ub], method="brentq")
     if result.converged:
-        return cast("float", result.root)
+        return result.root
     print(
         f"Could not find sigma for {row['raw_symbol']} with midprice {row['midprice']}",
     )

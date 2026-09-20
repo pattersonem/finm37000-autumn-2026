@@ -5,9 +5,9 @@ import pandas as pd
 import pytest
 
 from finm37000 import (
-    get_all_legs_on,
     get_databento_api_key,
     get_short_rate_curve,
+    get_stats_by_date,
     temp_env,
     tz_chicago,
 )
@@ -21,9 +21,16 @@ def client() -> db.Historical:
 
 
 @pytest.mark.db
-def test_get_all_legs_on_with_delayed_settle(client: db.Historical) -> None:
+def test_get_stats_by_date_with_delayed_settle(client: db.Historical) -> None:
     date = datetime.date(2022, 2, 24)
-    crude_at_war, _ = get_all_legs_on(client, date, "CL.FUT")
+    crude_defs = client.timeseries.get_range(
+        dataset="GLBX.MDP3",
+        schema="definition",
+        symbols="CL.FUT",
+        stype_in="parent",
+        start=date,
+    ).to_df()
+    crude_at_war = get_stats_by_date(client, date, crude_defs)
     valid_prices = crude_at_war[crude_at_war["Settlement price"].notna()]
     assert not valid_prices.empty
 
