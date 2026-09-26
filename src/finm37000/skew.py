@@ -1,6 +1,7 @@
 """Functions to fit basic skews."""
 
 import logging
+import warnings
 from dataclasses import dataclass
 from typing import Callable, Self, cast
 
@@ -173,14 +174,39 @@ def fit_weighted_piecewise_polynomial_skew(
 def fit_spline_skew(
     k: npt.NDArray[np.float64],
     sigma: npt.NDArray[np.float64],
-    pct: float = 0.1,
+    percent: float = 0.1,
     bc_type: str = "clamped",
     extrapolate: bool = False,
 ) -> CubicSpline:
-    """Fit a basic cubic spline."""
+    """Fit a basic cubic spline.
+
+    Fit a cubic spline to the implied volatilities ``sigma``
+    at strikes ``k``. Among the non-NA values, downsample roughly ``percent``
+    of the strikes to pass through, equally spaced by the index
+    not by strike. ``percent=1.0`` selects all
+    the strikes; the default selects ten percent of strikes.
+
+    The ``bc_type`` and ``extrapolate`` arguments are passed through
+    to ``scipy.interpolate.CubicSpline`` constructor.
+    """
+    if not (0.0 < percent <= 1.0):
+        msg = f"downsampling percentage {percent} must be between 0 and 1"
+        raise ValueError(msg)
+    fifty_percent = 0.5
+    if fifty_percent < percent < 1.0:
+        msg = (
+            "Downsampling percentages between 0.5 and 1.0 select half or all points,"
+            f" received {percent}."
+        )
+        warnings.warn(msg, stacklevel=2)
     k, sigma = filter_valid(k, sigma)
-    n = int(len(k) * pct)
-    spline = CubicSpline(k[::n], sigma[::n], bc_type=bc_type, extrapolate=extrapolate)  # type: ignore[call-overload]
+    step_size = max(1, int(1 / percent))
+    spline = CubicSpline(
+        k[::step_size],
+        sigma[::step_size],
+        bc_type=bc_type,
+        extrapolate=extrapolate,
+    )  # type: ignore[call-overload]
     return cast("CubicSpline", spline)
 
 

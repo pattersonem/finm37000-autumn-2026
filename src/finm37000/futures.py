@@ -97,11 +97,14 @@ def get_stats_by_date(
     return stats
 
 
+type RateCurve = Callable[[float], float]
+
+
 def build_short_rate_curve(
     stats: pd.DataFrame,
     start: pd.Timestamp,
     days_per_year: float = 360.0,
-) -> Callable[[float], float]:
+) -> RateCurve:
     """Bootstrap a zero-rate curve from one date's STIR futures settlement prices.
 
     Takes settlement prices from daily `stats` data frame.
@@ -163,9 +166,6 @@ def build_short_rate_curve(
         return float(np.interp(years_to_expiration, curve_t_arr, curve_r_arr))
 
     return rate_curve
-
-
-type RateCurve = Callable[[float], float]
 
 
 def get_short_rate_curve(

@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from finm37000 import additive_splice, multiplicative_splice, tz_chicago
+from finm37000 import additive_splice, multiplicative_splice, shift_spec, tz_chicago
 
 
 @pytest.mark.parametrize(
@@ -300,3 +300,32 @@ def test_simple_multiplicative_splice_example() -> None:
         date_col="datetime",
     )
     pd.testing.assert_frame_equal(actual, expected)
+
+
+def test_shift_roll_spec() -> None:
+    roll_spec = [
+        {"d0": "2025-09-12", "d1": "2025-09-17", "s": "651434"},
+        {"d0": "2025-09-17", "d1": "2025-09-28", "s": "432669"},
+        {"d0": "2025-09-28", "d1": "2025-10-10", "s": "651434"},
+    ]
+    shifted_spec = [
+        {"d0": "2025-08-29", "d1": "2025-09-03", "s": "651434"},
+        {"d0": "2025-09-03", "d1": "2025-09-14", "s": "432669"},
+        {"d0": "2025-09-14", "d1": "2025-09-26", "s": "651434"},
+    ]
+    assert shifted_spec == shift_spec(roll_spec, days=-14)
+
+
+def test_shift_roll_spec_across_dst() -> None:
+    """Check shifts across March 9 and November 2, 2025."""
+    roll_spec = [
+        {"d0": "2025-03-08", "d1": "2025-03-12", "s": "651434"},
+        {"d0": "2025-03-12", "d1": "2025-10-28", "s": "432669"},
+        {"d0": "2025-10-28", "d1": "2025-11-05", "s": "651434"},
+    ]
+    shifted_spec = [
+        {"d0": "2025-03-01", "d1": "2025-03-05", "s": "651434"},
+        {"d0": "2025-03-05", "d1": "2025-10-21", "s": "432669"},
+        {"d0": "2025-10-21", "d1": "2025-10-29", "s": "651434"},
+    ]
+    assert shifted_spec == shift_spec(roll_spec, days=-7)
