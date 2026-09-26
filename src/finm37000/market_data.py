@@ -6,9 +6,9 @@ import databento as db
 import pandas as pd
 
 from finm37000.continuous import (
-    _splice_unadjusted,
     additive_splice,
     multiplicative_splice,
+    splice_unadjusted,
 )
 
 
@@ -137,7 +137,7 @@ def fetch_continuous_ohlcv(  # noqa PLR0913
     ).reset_index()
 
     if adjustment == "none":
-        spliced = _splice_unadjusted(roll_spec, legs, date_col="ts_event")
+        spliced = splice_unadjusted(roll_spec, legs, date_col="ts_event")
     elif adjustment == "additive":
         spliced = additive_splice(
             roll_spec,

@@ -16,6 +16,8 @@ from .cache import (
 from .continuous import (
     additive_splice as additive_splice,
     multiplicative_splice as multiplicative_splice,
+    shift_spec as shift_spec,
+    splice_unadjusted as splice_unadjusted,
 )
 from .db_env_util import (
     temp_env as temp_env,

@@ -1,15 +1,22 @@
 """Functions to splice and adjust futures data into continuous data."""
 
+import datetime
 from typing import Optional
 
 import pandas as pd
 
 
-def _splice_unadjusted(
+def splice_unadjusted(
     roll_spec: list[dict[str, str]],
     df: pd.DataFrame,
     date_col: str,
 ) -> pd.DataFrame:
+    """Filter and order data according to roll spec.
+
+    Use the ``"instrument_id"`` column from the data frame ``df``
+    matched to the ``"s"`` field in the ``roll_spec`` to select
+    rows and put them in the order specified by the roll spec.
+    """
     grouped = df.groupby("instrument_id")
     pieces = []
     tz = df[date_col].dt.tz
@@ -111,7 +118,7 @@ def additive_splice(
     """
     if adjustment_cols is None:
         adjustment_cols = [adjust_by]
-    spliced = _splice_unadjusted(roll_spec, df, date_col)
+    spliced = splice_unadjusted(roll_spec, df, date_col)
     adjustments = _calc_additive_adjustment(
         roll_spec,
         df,
@@ -163,7 +170,7 @@ def multiplicative_splice(
     """
     if adjustment_cols is None:
         adjustment_cols = [adjust_by]
-    spliced = _splice_unadjusted(roll_spec, df, date_col)
+    spliced = splice_unadjusted(roll_spec, df, date_col)
     adjustments = _calc_multiplicative_adjustment(
         roll_spec,
         df,
@@ -185,3 +192,51 @@ def multiplicative_splice(
     with_adjustment[adjustments.name] = cumulative_adjustment
     new_columns = df.columns.tolist() + [adjustments.name]
     return with_adjustment.reset_index()[new_columns]
+
+
+def _shift_one_spec(
+    start: datetime.date,
+    end: datetime.date,
+    contract_id: str,
+    shift: datetime.timedelta,
+) -> dict[str, str]:
+    return {
+        "d0": (start + shift).strftime("%Y-%m-%d"),
+        "d1": (end + shift).strftime("%Y-%m-%d"),
+        "s": contract_id,
+    }
+
+
+def _convert_string_date(date_string: str) -> datetime.date:
+    return (
+        datetime.datetime.strptime(date_string, "%Y-%m-%d")
+        .astimezone(datetime.timezone.utc)
+        .date()
+    )
+
+
+def shift_spec(
+    roll_spec: list[dict[str, str]],
+    days: int,
+) -> list[dict[str, str]]:
+    """Shift a roll spec a fixed number of days.
+
+    Shift a Databento continuous contract roll spec a fixed number
+    of days.
+
+    A negative ``days`` argument will move it back in time.
+    This is sensible for a roll spec based on expiration because
+    the roll schedule is known in advance. Rolling based
+    on volume or open interest with negative days would introduce
+    look forward bias into your data.
+    """
+    shift = datetime.timedelta(days=days)
+    return [
+        _shift_one_spec(
+            start=_convert_string_date(spec["d0"]),
+            end=_convert_string_date(spec["d1"]),
+            contract_id=spec["s"],
+            shift=shift,
+        )
+        for spec in roll_spec
+    ]
