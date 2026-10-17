@@ -78,7 +78,7 @@ def _generate_readable_arg_str(
     max_arg_str_len = 120
     hash_len = 10
     if len(clean_str) > max_arg_str_len:
-        hash_str = _compute_short_checksum(bound_args, n=hash_len)
+        hash_str = _compute_short_checksum(raw_str, n=hash_len)
         clean_str = f"{clean_str[: (max_arg_str_len - hash_len)]}_{hash_str}"
     return clean_str
 
