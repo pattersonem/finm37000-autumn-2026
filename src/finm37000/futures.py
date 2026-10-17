@@ -135,7 +135,7 @@ def build_short_rate_curve(
 
     Returns:
     -------
-    Callable[[float], float]
+    RateCurve
         Maps a time to expiration in years to an interpolated zero rate.
 
     """
@@ -196,7 +196,7 @@ def get_short_rate_curve(
 
     Returns:
     -------
-    Callable[[float], float]
+    RateCurve
         Maps a time to expiration in years to an interpolated zero rate.
 
     """
