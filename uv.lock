@@ -833,7 +833,7 @@ wheels = [
 
 [[package]]
 name = "finm37000-autumn-2026"
-version = "0.2.0"
+version = "0.2.2"
 source = { editable = "." }
 dependencies = [
     { name = "databento" },
