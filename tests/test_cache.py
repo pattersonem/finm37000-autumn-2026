@@ -68,6 +68,47 @@ def test_generate_cache_filename() -> None:
     assert some_arg_filename.endswith(".parquet")
 
 
+def test_generate_cache_filename_long_args_ignore_client() -> None:
+    """Truncated filenames must not hash ignored args like a client.
+
+    A client's default repr includes its memory address, which changes on
+    every run and would make the cache miss.
+    """
+
+    class FakeClient:
+        pass
+
+    def some_function(
+        client: FakeClient,  # noqa: ARG001
+        contracts: list[str],  # noqa: ARG001
+        start: pd.Timestamp,  # noqa: ARG001
+        end: pd.Timestamp,  # noqa: ARG001
+    ) -> pd.DataFrame:
+        return pd.DataFrame()
+
+    contracts = ["LOZ6 C7000", "LOZ6 P7000", "LOZ6 C7100", "LOZ6 P7100"]
+    start = pd.Timestamp("2026-09-03 13:14:15.123456789", tzinfo=ZoneInfo("UTC"))
+    end = pd.Timestamp("2026-10-03 13:14:15.123456789", tzinfo=ZoneInfo("UTC"))
+
+    def filename(client: FakeClient, end: pd.Timestamp) -> str:
+        return generate_cache_filename(
+            some_function,
+            (client, contracts, start, end),
+            kwargs={},
+            args_to_ignore=("client",),
+        )
+
+    first = filename(FakeClient(), end)
+    second = filename(FakeClient(), end)
+    max_arg_str_len = 120
+    assert len(first) > len(some_function.__name__) + max_arg_str_len
+    assert first == second
+
+    # Args lost to truncation must still change the filename via the hash.
+    later_end = end + pd.Timedelta(days=1)
+    assert filename(FakeClient(), later_end) != first
+
+
 def test_get_cache_dir_default(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
     fake_home = tmp_path / "fake_home"
     repo_root = fake_home / "fake_project"  # No .git yet, defaults relative to home.
